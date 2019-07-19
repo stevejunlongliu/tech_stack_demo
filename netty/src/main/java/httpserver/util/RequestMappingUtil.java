@@ -4,25 +4,29 @@ import httpserver.annotation.RequestMethod;
 import httpserver.controller.TestController;
 import httpserver.core.Request;
 import httpserver.handle.RequestHandler;
+import httpserver.impl.RequestImpl;
 import httpserver.model.entry.TestEntry;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-/**
- * User: janon
- * Date: 13-11-9 上午10:09
- */
+import httpserver.annotation.RequestMapping;
+
 public class RequestMappingUtil {
     private static final Logger logger = LoggerFactory.getLogger(RequestMappingUtil.class);
 
     public static RequestHandler getHandler() throws Exception {
+
         //todo 先搞定一个handler返回出去，执行到对应的的方法上
         Method method = TestController.class.getMethod("groupInfo", Request.class);
         RequestHandler mh = new RequestHandler();
@@ -37,9 +41,51 @@ public class RequestMappingUtil {
         mh.setParameter(method.getParameterTypes(), parameterOrder);
         Class<?> dataTypeClz = getRequestDataType(mh.getMethod());
         mh.setDataType(dataTypeClz);
-        RequestMethod[] reqMethod = {RequestMethod.GET,RequestMethod.POST};//todo 要从注解中来
+        RequestMethod[] reqMethod = {RequestMethod.GET, RequestMethod.POST};//todo 要从注解中来
         mh.setRequestMethods(reqMethod);
         return mh;
+    }
+
+    public static void main(String[] args) throws Exception {
+        String compmentScan = "httpserver.controller";
+        List<Class<?>> list = ClassPathCandidateComponentScanner.getClasssFromPackage(compmentScan);
+        List<Class<?>> handles = new ArrayList<>();
+        for (Class<?> aClass : list) {
+            RequestMapping ano = aClass.getAnnotation(RequestMapping.class);
+            if (ano != null) {
+                handles.add(aClass);
+            }
+            System.out.println(aClass.getName());
+        }
+
+        //根据路由找到对应controller
+        HashMap<String, Object> methodMap = new HashMap<>();
+        for (Class<?> handle : handles) {
+//todo 遍历所有的method
+            //todo 以Methtod为key组件pathmap
+            RequestMapping controllerRequestMap = handle.getAnnotation(RequestMapping.class);
+            String controllerMapUrl = controllerRequestMap.value().length > 0 ? controllerRequestMap.value()[0] : "";
+            for (Method method : handle.getMethods()) {
+                RequestMapping requestMap = method.getAnnotation(RequestMapping.class);
+                if (requestMap == null) {
+                    continue;
+                }
+                String methodMapUrl = requestMap.value().length > 0 ? requestMap.value()[0] : "";//最后一个url
+                String key = controllerMapUrl + "/" + methodMapUrl;
+                methodMap.put(key, method);//形成url+method的map
+                //还要把controller实例放进去
+            }
+        }
+
+        String path = "/test/t1";
+        Method handle = (Method) methodMap.get(path);
+        RequestImpl<TestEntry> request = new RequestImpl<TestEntry>();
+        TestEntry entry = new TestEntry("a", "ss");
+        TestController tmp = new TestController();//一定要有实例化的controller todo 需要将controller都形成一个实例后保存在bean当中
+        handle.invoke(tmp, request);
+//Object result =
+        //System.out.println(result);
+
     }
 
     /*

@@ -26,6 +26,17 @@ public class TestController {
     }
 
 
+    /**
+     * 测试
+     */
+    @RequestMapping(value = "t2")
+    public void t2() throws Exception {
+        //sRequest<TestEntry> request
+
+        System.out.println("t2 working ");
+
+    }
+
 //    public static void main(String[] args) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
 //        TestController a = new TestController();
 //        TestController.class.getMethod("groupInfo").invoke(a, null);

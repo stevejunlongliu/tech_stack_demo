@@ -35,6 +35,10 @@ public class RequestImpl<T> implements Request<T> {
     private ChannelHandlerContext ctx;
     //private Locale currentLang = I18NBO.getDefaultLocale();
 
+    public RequestImpl() {
+
+    }
+
     public RequestImpl(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         attr = new HashMap<String, Object>();
         params = new StringMap<Object>();
