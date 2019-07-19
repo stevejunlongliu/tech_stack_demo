@@ -2,10 +2,15 @@ package httpserver;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import httpserver.handle.RequestHandler;
+import httpserver.model.entry.TestEntry;
+import httpserver.util.RequestMappingUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
 import io.netty.util.AsciiString;
+import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.codec.CharEncoding;
 import org.apache.commons.codec.Charsets;
 import org.springframework.beans.BeansException;
@@ -35,7 +40,7 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
     }
 
     //handle处理
-    private void handleAction(HttpObject msg) throws Exception {
+    private void handleAction(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         //todo 识别路径
         //todo 寻找handle
         //todo 识别header,body,
@@ -65,8 +70,13 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
         } else if (method.equals(HttpMethod.POST)) {
             //POST请求,由于你需要从消息体中获取数据,因此有必要把msg转换成FullHttpRequest
             fullRequest = (FullHttpRequest) msg;
-            //根据不同的Content_Type处理body数据
-            dealWithContentType();
+            RequestHandler handler = RequestMappingUtil.getHandler();
+            handler.setHandlerObj(handler);
+
+            handler.handle(ctx, fullRequest);//执行handle
+
+            //根据不同的Content_Type处理body数据88
+            //dealWithContentType();//识别传入的数据
 
         }
 
@@ -94,7 +104,6 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
     @Override
     public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
 
-
         if (msg instanceof HttpRequest) {
             request = (HttpRequest) msg;
             headers = request.headers();
@@ -104,22 +113,64 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
                 return;
             }
 
-            handleAction(msg);
-            byte[] content = new String("haha this is return ").getBytes();
+            handleAction(ctx, msg);
 
 
-            FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(content));
-            response.headers().set(CONTENT_TYPE, "text/plain");
-            response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
+            //testResponeEntry(ctx, msg);
+            //testRespone(ctx);
+            //
 
-            boolean keepAlive = HttpUtil.isKeepAlive(request);
-            if (!keepAlive) {
-                ctx.write(response).addListener(ChannelFutureListener.CLOSE);
-            } else {
-                response.headers().set(CONNECTION, KEEP_ALIVE);
-                ctx.write(response);
-            }
+
+//            FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(content));
+//            response.headers().set(CONTENT_TYPE, "text/plain");
+//            response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
+//
+//            boolean keepAlive = HttpUtil.isKeepAlive(request);
+//            if (!keepAlive) {
+//                ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+//            } else {
+//                response.headers().set(CONNECTION, KEEP_ALIVE);
+//                ctx.write(response);
+//            }
+            // ReferenceCountUtil.release(msg);
         }
+
+    }
+
+    //返回实体
+    public void testRespone(ChannelHandlerContext ctx) {
+        String content = "{\"a\":\"val1\"}";
+
+        TestEntry e = new TestEntry("a", "b");
+        // 1.设置响应
+        FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                HttpResponseStatus.OK,
+                Unpooled.copiedBuffer(JSONObject.toJSONString(e), CharsetUtil.UTF_8));
+
+        resp.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
+        //ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE);//写完后一定要关闭channel后，服务端才会返回
+        //JSONObject.toJSONString(new TestEntry("a11", "b11"))
+        ctx.write(resp);
+        // ctx.write(Unpooled.copiedBuffer(JSONObject.toJSONString(e), CharsetUtil.UTF_8));
+        // ctx.write(Unpooled.copiedBuffer("This is response", CharsetUtil.UTF_8));
+
+        ChannelFuture future = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+        future.addListener(ChannelFutureListener.CLOSE);
+        //ctx.write(resp);
+    }
+
+    public void testResponeEntry(ChannelHandlerContext ctx, HttpObject msg) {
+        TestEntry e = new TestEntry("a", "b");
+        //HttpVersion.HTTP_1_1
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        //response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
+        response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "application/json; charset=UTF-8");
+        ctx.write(response);
+        ctx.write(Unpooled.copiedBuffer(JSONObject.toJSONString(e), CharsetUtil.UTF_8));//最后记得flush
+
+        ChannelFuture future = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+        future.addListener(ChannelFutureListener.CLOSE);
+
 
     }
 
@@ -129,6 +180,8 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
      * @throws Exception
      */
     private void dealWithContentType() throws Exception {
+
+
         String contentType = getContentType();
         //可以使用HttpJsonDecoder
         if (contentType.equals("application/json")) {
@@ -176,4 +229,6 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
 
     }
+
+
 }
