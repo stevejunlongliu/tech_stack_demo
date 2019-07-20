@@ -62,7 +62,8 @@ public class RequestMappingUtil {
                 }
                 String methodMapUrl = requestMap.value().length > 0 ? requestMap.value()[0] : "";//最后一个url
                 String key = controllerMapUrl + "/" + methodMapUrl;
-                RequestHandler handler = new RequestHandler(key, handleModel, method);
+                RequestHandler handler = initHandleMethod(key, handleModel, method);
+
                 methodMap.put(key, handler);//形成url+method的map
                 //还要把controller实例放进去
             }
@@ -92,6 +93,29 @@ public class RequestMappingUtil {
         RequestHandler mh = new RequestHandler();
         //mh.setHandlerObj(obj);
         mh.setHandlerClass(TestController.class);
+        //mh.setMethod(TestController.class.getMethod("groupInfo"));
+        mh.setMethod(method);
+        //mh.setUrl(s);
+        int parameterOrder = RequestHandler.genParameterOrder(method.getParameterTypes());
+        if (parameterOrder < 0)
+            return null;
+        mh.setParameter(method.getParameterTypes(), parameterOrder);
+        Class<?> dataTypeClz = getRequestDataType(mh.getMethod());
+        mh.setDataType(dataTypeClz);
+
+        RequestMethod[] reqMethod = {RequestMethod.GET, RequestMethod.POST};//todo 要从注解中来
+        //String[] reqMethod = method.getAnnotation(RequestMapping.class).value();//{RequestMethod.GET, RequestMethod.POST};
+        // todo 要先判断method的注解，再向上判断controller的注解，如果没有，就是全支持或者get,post？
+        mh.setRequestMethods(reqMethod);
+        return mh;
+    }
+
+    private static RequestHandler initHandleMethod(String url, Object handlerObj, Method method) {
+        //Method method = getMethod();
+        RequestHandler mh = new RequestHandler();
+        //mh.setHandlerObj(obj);
+        mh.setHandlerClass(handlerObj.getClass());
+        mh.setHandlerObj(handlerObj);
         //mh.setMethod(TestController.class.getMethod("groupInfo"));
         mh.setMethod(method);
         //mh.setUrl(s);

@@ -8,6 +8,7 @@ import httpserver.core.Response;
 import httpserver.core.Result;
 import httpserver.impl.RequestImpl;
 import httpserver.impl.ResponseImpl;
+import httpserver.util.HandlerUtil;
 import httpserver.util.ThreadLocalLog;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -29,9 +30,9 @@ public class RequestHandler {
 
     private Method method;// 具体方法
 
-    private int parameterOrder = 0;//todo
+    private int parameterOrder = 0;//todo 待确认注释
 
-    private Object handlerObj;//todo 具体实现
+    private Object handlerObj;//handle实例
 
     private ResponseDataTypeElement responseContentType = ResponseDataTypeElement.JSON;
 
@@ -132,11 +133,11 @@ public class RequestHandler {
             }
         }
 
-        //todo 确定keeplive 和gzip的作用
+
         boolean keepAlive = HttpHeaders.isKeepAlive(req);
         if (!allowRequest) {
-            //todo 发送错误日志
-            // HandlerUtil.sendError(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED, keepAlive);
+
+            HandlerUtil.sendError(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED, keepAlive);
             return;
         }
 
@@ -157,18 +158,16 @@ public class RequestHandler {
         ResponseImpl response = new ResponseImpl(ctx, responseContentType, gzip, keepAlive);
         Object result = null;
 
-        //todo 根据请求路由，选择对应的handle
-        TestController tmp = new TestController();
-        //result = method.invoke(tmp, null);
+        // 根据请求路由，选择对应的handle
 
         switch (parameterOrder) {//根据参数类型，选择invoke的方式
             case 0:
                 //result = method.invoke(handlerObj);
-                result = method.invoke(tmp);
+                result = method.invoke(handlerObj);
                 break;
             case 1:
                 //result = method.invoke(handlerObj, request);
-                result = method.invoke(tmp, request);
+                result = method.invoke(handlerObj, request);
                 break;
         }
 

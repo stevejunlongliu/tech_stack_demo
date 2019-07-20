@@ -41,11 +41,10 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
 
     //handle处理
     private void handleAction(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
-        //todo 识别路径
-        //todo 寻找handle
-        //todo 识别header,body,
-        //todo handle做出回应
-
+        // 识别路径
+        // 寻找handle
+        // 识别header,body,
+        // handle做出回应
 
         System.out.println("actionhandle");
 
@@ -70,8 +69,10 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
         } else if (method.equals(HttpMethod.POST)) {
             //POST请求,由于你需要从消息体中获取数据,因此有必要把msg转换成FullHttpRequest
             fullRequest = (FullHttpRequest) msg;
-            RequestHandler handler = RequestMappingUtil.getHandler();
-            handler.setHandlerObj(handler);
+            String url = ((FullHttpRequest) msg).getUri();
+            //RequestHandler handler = RequestMappingUtil.getHandler();
+            RequestHandler handler = RequestMappingUtil.methodMap.get(url);
+            //handler.setHandlerObj(handler);
 
             handler.handle(ctx, fullRequest);//执行handle
 
