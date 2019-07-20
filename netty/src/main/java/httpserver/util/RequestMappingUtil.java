@@ -1,6 +1,7 @@
 package httpserver.util;
 
 import httpserver.annotation.RequestMethod;
+import httpserver.controller.DemoController;
 import httpserver.controller.TestController;
 import httpserver.core.Request;
 import httpserver.handle.RequestHandler;
@@ -23,7 +24,66 @@ import java.util.Map;
 import httpserver.annotation.RequestMapping;
 
 public class RequestMappingUtil {
+    private Map<String, RequestHandler> handlerMap = new HashMap<>();
     private static final Logger logger = LoggerFactory.getLogger(RequestMappingUtil.class);
+
+    public static List<Object> handlesInstances = new ArrayList<>();//应设置成静态变量进永久代
+
+    //根据路由找到对应controller
+    public static Map<String, RequestHandler> methodMap = new HashMap<>();
+
+    public static void init(String compmentScan) throws IllegalAccessException, InstantiationException, InvocationTargetException {
+        //String compmentScan = "httpserver.controller";
+        //todo compmentScan支持逗号分隔
+        List<Class<?>> list = ClassPathCandidateComponentScanner.getClasssFromPackage(compmentScan);
+        //List<Class<?>> handles = new ArrayList<>();
+
+        for (Class<?> aClass : list) {
+            RequestMapping ano = aClass.getAnnotation(RequestMapping.class);
+            if (ano != null) {
+                //handles.add(aClass);
+                handlesInstances.add(aClass.newInstance());//追个实例进去beans
+            }
+            System.out.println(aClass.getName());
+        }
+
+
+        // for (Class<?> handle : handles) {
+        for (Object handleModel : handlesInstances) {
+
+            Class handle = handleModel.getClass();
+            //todo 以Methtod为key组件pathmap donging
+            RequestMapping controllerRequestMap = (RequestMapping) handle.getAnnotation(RequestMapping.class);
+            String controllerMapUrl = controllerRequestMap.value().length > 0 ? controllerRequestMap.value()[0] : "";
+            for (Method method : handle.getMethods()) {
+                RequestMapping requestMap = method.getAnnotation(RequestMapping.class);
+                if (requestMap == null) {
+                    continue;
+                }
+                String methodMapUrl = requestMap.value().length > 0 ? requestMap.value()[0] : "";//最后一个url
+                String key = controllerMapUrl + "/" + methodMapUrl;
+                RequestHandler handler = new RequestHandler(key, handleModel, method);
+                methodMap.put(key, handler);//形成url+method的map
+                //还要把controller实例放进去
+            }
+        }
+
+        //todo 1.集成进启动函数中调用 2.启动函数改名Strap 3.
+//
+//        String path = "/test/t1";//输入
+//        RequestHandler handler = methodMap.get(path);
+//        if (handler == null) {
+//            System.out.println("fail to get handle");
+//            return;
+//        }
+//        Method handle = handler.getMethod();
+//        RequestImpl<TestEntry> request = new RequestImpl<TestEntry>();
+//        TestEntry entry = new TestEntry("a", "ss");
+//
+//        //Object tmp = handle.getDeclaringClass().newInstance();//根据method所在类声明一个实例
+//        //完成 如果每次都要生成一个实例损耗太大，需要在应用初始化(或者懒加载)时就完成初始化并放在容器中 用handle.getDeclaringClass()的name做key
+//        handle.invoke(handler.getHandlerObj(), request);
+    }
 
     public static RequestHandler getHandler() throws Exception {
 
@@ -47,45 +107,8 @@ public class RequestMappingUtil {
     }
 
     public static void main(String[] args) throws Exception {
-        String compmentScan = "httpserver.controller";
-        List<Class<?>> list = ClassPathCandidateComponentScanner.getClasssFromPackage(compmentScan);
-        List<Class<?>> handles = new ArrayList<>();
-        for (Class<?> aClass : list) {
-            RequestMapping ano = aClass.getAnnotation(RequestMapping.class);
-            if (ano != null) {
-                handles.add(aClass);
-            }
-            System.out.println(aClass.getName());
-        }
 
-        //根据路由找到对应controller
-        HashMap<String, Object> methodMap = new HashMap<>();
-        for (Class<?> handle : handles) {
-//todo 遍历所有的method
-            //todo 以Methtod为key组件pathmap
-            RequestMapping controllerRequestMap = handle.getAnnotation(RequestMapping.class);
-            String controllerMapUrl = controllerRequestMap.value().length > 0 ? controllerRequestMap.value()[0] : "";
-            for (Method method : handle.getMethods()) {
-                RequestMapping requestMap = method.getAnnotation(RequestMapping.class);
-                if (requestMap == null) {
-                    continue;
-                }
-                String methodMapUrl = requestMap.value().length > 0 ? requestMap.value()[0] : "";//最后一个url
-                String key = controllerMapUrl + "/" + methodMapUrl;
-                methodMap.put(key, method);//形成url+method的map
-                //还要把controller实例放进去
-            }
-        }
-
-        String path = "/test/t1";
-        Method handle = (Method) methodMap.get(path);
-        RequestImpl<TestEntry> request = new RequestImpl<TestEntry>();
-        TestEntry entry = new TestEntry("a", "ss");
-        TestController tmp = new TestController();//一定要有实例化的controller todo 需要将controller都形成一个实例后保存在bean当中
-        handle.invoke(tmp, request);
-//Object result =
-        //System.out.println(result);
-
+        init("httpserver.controller");
     }
 
     /*

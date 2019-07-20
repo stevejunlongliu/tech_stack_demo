@@ -18,6 +18,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.lang.reflect.Method;
 
 public class RequestHandler {
+    private String url;
 
     private Class<?> handlerClass; //对应的controller
 
@@ -26,7 +27,7 @@ public class RequestHandler {
     private boolean useGzip = true;//支持压缩
 
 
-    private Method method;//todo 具体实现
+    private Method method;// 具体方法
 
     private int parameterOrder = 0;//todo
 
@@ -36,6 +37,22 @@ public class RequestHandler {
 
     private Class<?> dataType;
 
+    public RequestHandler() {
+    }
+
+    public RequestHandler(String url, Object handlerObj, Method method) {
+        this.url = url;
+        this.handlerObj = handlerObj;
+        this.method = method;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
 
     public Class<?> getDataType() {
         return dataType;
