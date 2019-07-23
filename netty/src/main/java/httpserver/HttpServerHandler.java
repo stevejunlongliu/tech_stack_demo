@@ -24,12 +24,9 @@ import java.util.logging.Logger;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
-//, Handler
-//implements ApplicationContextAware
-//
-//extends SimpleChannelInboundHandler<FullHttpRequest>
-public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
-    //ss  private static final byte[] CONTENT = { 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd' };
+public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject>
+{
+
 
 
     //打印输入的内容
@@ -46,47 +43,96 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
         // 识别header,body,
         // handle做出回应
 
-        System.out.println("actionhandle");
+        //todo 可以启用线程池，异步处理逻辑部分，完成后只要执行ChannelFutureListener.CLOSE就能通知到阻塞调用方，完成调用过程
+        if (acceptInboundMessage(msg)) {
 
-        request = (HttpRequest) msg;
-
-        headers = request.headers();
-        String uri = request.uri();
-        HttpMethod method = request.method();
-        printDetail(request);
-        if (method.equals(HttpMethod.GET)) {
-            //Charsets.toCharset(CharEncoding.UTF_8)
-            QueryStringDecoder queryDecoder = new QueryStringDecoder(uri);
-            Map<String, List<String>> uriAttributes = queryDecoder.parameters();
-            //此处仅打印请求参数（你可以根据业务需求自定义处理）
-            for (Map.Entry<String, List<String>> attr : uriAttributes.entrySet()) {
-                for (String attrVal : attr.getValue()) {
-                    logger.info(attr.getKey() + "=" + attrVal);
-
+            System.out.println("actionhandle");
+            boolean release = true;
+            try {
+                release = false;
+                executeChannelRead1(ctx, (HttpRequest) msg);
+            } finally {
+                if (release) {
+                    ReferenceCountUtil.release(msg);
                 }
             }
-            //  user.setMethod("get");
-        } else if (method.equals(HttpMethod.POST)) {
-            //POST请求,由于你需要从消息体中获取数据,因此有必要把msg转换成FullHttpRequest
-            fullRequest = (FullHttpRequest) msg;
-            String url = ((FullHttpRequest) msg).getUri();
-            //RequestHandler handler = RequestMappingUtil.getHandler();
-            RequestHandler handler = RequestMappingUtil.methodMap.get(url);
-            //handler.setHandlerObj(handler);
-
-            handler.handle(ctx, fullRequest);//执行handle
-
-            //根据不同的Content_Type处理body数据88
-            //dealWithContentType();//识别传入的数据
-
         }
+
+
+        return;
 
 
     }
 
+    //代码备份
+    public void tmp() {
+//        request = msg;
+//
+//        headers = request.headers();
+//        String uri = request.uri();
+//        HttpMethod method = request.method();
+//        printDetail(request);
+//        if (method.equals(HttpMethod.GET)) {
+//            //Charsets.toCharset(CharEncoding.UTF_8)
+//            QueryStringDecoder queryDecoder = new QueryStringDecoder(uri);
+//            Map<String, List<String>> uriAttributes = queryDecoder.parameters();
+//            //此处仅打印请求参数（你可以根据业务需求自定义处理）
+//            for (Map.Entry<String, List<String>> attr : uriAttributes.entrySet()) {
+//                for (String attrVal : attr.getValue()) {
+//                    logger.info(attr.getKey() + "=" + attrVal);
+//
+//                }
+//            }
+//            //  user.setMethod("get");
+//        } else if (method.equals(HttpMethod.POST)) {
+//            //POST请求,由于你需要从消息体中获取数据,因此有必要把msg转换成FullHttpRequest
+//            fullRequest = (FullHttpRequest) msg;
+//            String url = ((FullHttpRequest) msg).getUri();
+//            //RequestHandler handler = RequestMappingUtil.getHandler();
+//            RequestHandler handler = RequestMappingUtil.methodMap.get(url);
+//            //handler.setHandlerObj(handler);
+//
+//            try {
+//                handler.handle(ctx, fullRequest);//执行handle
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//
+//
+//        }
+    }
+
+    private void executeChannelRead1(final ChannelHandlerContext ctx, final HttpRequest msg) throws Exception {
+
+        String json = ((FullHttpRequest) msg).content().toString(CharsetUtil.UTF_8);
+        System.out.println("before runable:" + json);
+
+        //ReferenceCountUtil.release(msg);
+        String json2 = ((FullHttpRequest) msg).content().toString(CharsetUtil.UTF_8);
+        System.out.println("before runable2:" + json2);
+        final String tmp = "111";
+
+
+        HttpNettyServer.executorGroup.execute(new Runnable() {
+            @Override
+            public void run() {
+
+                try {
+                    String json = ((FullHttpRequest) msg).content().toString(CharsetUtil.UTF_8);
+                    System.out.println("after runable:" + json);
+                    System.out.println("after tmp:" + tmp);
+                } finally {
+                    ReferenceCountUtil.release(msg);
+                }
+
+            }
+        });
+        // Thread.sleep(2000);
+    }
+
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
-        ctx.flush();
+        // ctx.flush();
     }
 
     private static final String FAVICON_ICO = "/favicon.ico";
@@ -116,24 +162,6 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
 
             handleAction(ctx, msg);
 
-
-            //testResponeEntry(ctx, msg);
-            //testRespone(ctx);
-            //
-
-
-//            FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(content));
-//            response.headers().set(CONTENT_TYPE, "text/plain");
-//            response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
-//
-//            boolean keepAlive = HttpUtil.isKeepAlive(request);
-//            if (!keepAlive) {
-//                ctx.write(response).addListener(ChannelFutureListener.CLOSE);
-//            } else {
-//                response.headers().set(CONNECTION, KEEP_ALIVE);
-//                ctx.write(response);
-//            }
-            // ReferenceCountUtil.release(msg);
         }
 
     }
@@ -143,7 +171,7 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
         String content = "{\"a\":\"val1\"}";
 
         TestEntry e = new TestEntry("a", "b");
-        // 1.设置响应
+        //        // 1.设置响应
         FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
                 HttpResponseStatus.OK,
                 Unpooled.copiedBuffer(JSONObject.toJSONString(e), CharsetUtil.UTF_8));

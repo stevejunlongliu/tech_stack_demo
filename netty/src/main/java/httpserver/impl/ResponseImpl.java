@@ -223,23 +223,7 @@ public class ResponseImpl implements Response {
 
     //对返回结果进行写入
     public void close() throws Exception {
-//
-//       TestEntry e1 = new TestEntry("a", "b");
-//
-//        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-//        response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
-//        //  ctx.write(response);
-//
-//        ctx.write(__response);
-//        ctx.write(reslutByte);//最后记得flush
-//     //   ctx.write(Unpooled.copiedBuffer(JSONObject.toJSONString(e1), CharsetUtil.UTF_8));//最后记得flush
-//
-//        ChannelFuture future = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-//        future.addListener(ChannelFutureListener.CLOSE);
-//
-//
-//        if (true)
-//            return;
+
 
 
         if (close.getAndSet(true)) {

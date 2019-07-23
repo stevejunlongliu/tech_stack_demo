@@ -21,6 +21,7 @@ public class TestController {
         Object x = entry.getData();
         Result result = new Result();
         result.build("haah");
+        Thread.sleep(200);
         System.out.println("t1 working ");
         return result;
     }
